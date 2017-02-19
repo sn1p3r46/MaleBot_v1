@@ -12,7 +12,7 @@ start() ->
   inets:start(),
   ssl:start(),
 
-  {ok, IoDevice} = file:open("lista_badwords.txt", [read]),
+  {ok, IoDevice} = file:open("res/lista_badwords.txt", [read]),
   Words = read_words(IoDevice, []),
   file:close(IoDevice),
 
