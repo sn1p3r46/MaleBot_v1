@@ -8,42 +8,43 @@
 -define(SET_COMMAND_URL, ?BASE_URL ++ "/sendMessage").
 
 start() ->
-	io:format("---Start bot---~n"),
-	inets:start(),
-	ssl:start(),
+  io:format("---Start bot---~n"),
+  inets:start(),
+  ssl:start(),
 
   {ok, IoDevice} = file:open("lista_badwords.txt", [read]),
-	Words = read_words(IoDevice, []),
-	file:close(IoDevice),
-	command_handler(?GET_COMMAND_URL, 0, Words).
+  Words = read_words(IoDevice, []),
+  file:close(IoDevice),
+
+  command_handler(?GET_COMMAND_URL, 0, Words).
 
 read_words(IoDevice, Words) ->
-		case file:read_line(IoDevice) of
-			{ok, Line} ->
-				[V] = string:tokens(Line,"\n"),
-				read_words(IoDevice, lists:append(Words, [V]));
-			eof -> Words
-		 end.
+  case file:read_line(IoDevice) of
+    {ok, Line} ->
+  		[V] = string:tokens(Line,"\n"),
+  		read_words(IoDevice, lists:append(Words, [V]));
+    eof -> Words
+  end.
 
 command_handler(Url, UpdateId, Words) ->
 	Response = parse_response(get_command(Url ++ integer_to_list(UpdateId + 1))),
 	{JsonObj} = jiffy:decode(Response),
 	Result = proplists:get_value(<<"result">>, JsonObj, []),
 	Message = case Result of
-		[ {[{<<"update_id">>, NewUpdateId}, {<<"message">>, {_Message}} |_]} |_] ->
-			_Message;
-		[ {[{<<"update_id">>, NewUpdateId}, {<<"edited_message">>, {_Message}} |_]} |_] ->
-			_Message;
-		[ {[{<<"update_id">>, NewUpdateId} |_]} |_] ->
-			notxt;
-		[] ->	NewUpdateId = UpdateId,
-			notxt
+    [ {[{<<"update_id">>, NewUpdateId}, {<<"message">>, {_Message}} |_]} |_] ->
+    	_Message;
+    [ {[{<<"update_id">>, NewUpdateId}, {<<"edited_message">>, {_Message}} |_]} |_] ->
+    	_Message;
+    [ {[{<<"update_id">>, NewUpdateId} |_]} |_] ->
+    	notxt;
+    [] ->	NewUpdateId = UpdateId,
+      notxt
 	end,
 	case parse_message(Message) of
 		{command, ChatID, _, Msg_str} ->
-				run_command(ChatID, Msg_str);
+      run_command(ChatID, Msg_str);
 		{text, ChatID, MsgID, Msg_str} ->
-				check_badword(ChatID, MsgID, Msg_str, Words);
+			check_badword(ChatID, MsgID, Msg_str, Words);
 		notxt -> ok
 	end,
 	timer:sleep(1000),
@@ -75,13 +76,14 @@ parse_message(Message) when Message /= notxt ->
 	Command = proplists:get_value(<<"text">>, Message),
 	MsgID = proplists:get_value(<<"message_id">>, Message),
 	case Command of
-		undefined -> notxt;
-		_ -> Msg_str = binary_to_list(Command),
-				 case Msg_str of
-					 [H|_] when H==47 -> {command, ChatID, MsgID, Msg_str};
-					 _  -> {text, ChatID, MsgID, Msg_str}
-				 end
+    undefined -> notxt;
+    _ -> Msg_str = binary_to_list(Command),
+      case Msg_str of
+       [H|_] when H==47 -> {command, ChatID, MsgID, Msg_str};
+       _  -> {text, ChatID, MsgID, Msg_str}
+      end
 	end;
+
 parse_message(_) -> notxt.
 
 terminate() ->
@@ -100,27 +102,27 @@ check_badword(ChatID, MsgID, Message, Words) ->
 	List = string:tokens(Msg_clean, " \n"),
 
 	case check_badword_rec(List, Words) of
-		{bad, Word} -> send_message(ChatID, MsgID, "Modera il linguaggio! '"++ Word++"' non si dice!");
-		nobad -> nobad
+  	{bad, Word} -> send_message(ChatID, MsgID, "Modera il linguaggio! '"++ Word++"' non si dice!");
+  	nobad -> nobad
 	end,
 	N2 = os:timestamp(),
 	Time = timer:now_diff(N2,N1)/1000000,
 	io:format("check message in ~w~n", [Time]).
 
 check_badword_rec([H1|T], Words) when T /= [] ->
-	case check_badword_rec([H1], Words) of
-		nobad -> [H2|_] = T,
-						 case lists:any(fun(Bad) -> H1++H2 == Bad end, Words) of
-							 true ->	{bad, H1 ++ " " ++ H2};
-							 false -> check_badword_rec(T, Words)
-						 end;
-		A -> A
-	end;
+  case check_badword_rec([H1], Words) of
+    nobad -> [H2|_] = T,
+      case lists:any(fun(Bad) -> H1++H2 == Bad end, Words) of
+        true ->	{bad, H1 ++ " " ++ H2};
+        false -> check_badword_rec(T, Words)
+      end;
+    A -> A
+  end;
 
 check_badword_rec([H], Words) ->
-	case lists:any(fun(Bad) -> H == Bad end, Words) of
-	 true ->	{bad, H};
-	 false -> nobad
-end;
+  case lists:any(fun(Bad) -> H == Bad end, Words) of
+    true ->	{bad, H};
+    false -> nobad
+  end;
 
 check_badword_rec([], _) -> nobad.
