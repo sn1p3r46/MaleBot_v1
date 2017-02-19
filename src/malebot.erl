@@ -21,8 +21,8 @@ start() ->
 read_words(IoDevice, Words) ->
   case file:read_line(IoDevice) of
     {ok, Line} ->
-  		[V] = string:tokens(Line,"\n"),
-  		read_words(IoDevice, lists:append(Words, [V]));
+      [V] = string:tokens(Line,"\n"),
+      read_words(IoDevice, lists:append(Words, [V]));
     eof -> Words
   end.
 
@@ -37,7 +37,8 @@ command_handler(Url, UpdateId, Words) ->
     	_Message;
     [ {[{<<"update_id">>, NewUpdateId} |_]} |_] ->
     	notxt;
-    [] ->	NewUpdateId = UpdateId,
+    [] ->
+      NewUpdateId = UpdateId,
       notxt
 	end,
 	case parse_message(Message) of
@@ -51,24 +52,23 @@ command_handler(Url, UpdateId, Words) ->
 	command_handler(Url, NewUpdateId, Words).
 
 send_message(ChatID, Text) ->
-	set_command(?SET_COMMAND_URL, "chat_id=" ++ integer_to_list(ChatID) ++ "&text=" ++ Text).
+  set_command(?SET_COMMAND_URL, "chat_id=" ++ integer_to_list(ChatID) ++ "&text=" ++ Text).
 
 send_message(ChatID, MsgID, Text) ->
-	set_command(?SET_COMMAND_URL, "chat_id=" ++ integer_to_list(ChatID) ++ "&text=" ++ Text ++ "&reply_to_message_id=" ++ integer_to_list(MsgID)).
+  set_command(?SET_COMMAND_URL, "chat_id=" ++ integer_to_list(ChatID) ++ "&text=" ++ Text ++ "&reply_to_message_id=" ++ integer_to_list(MsgID)).
 
 get_command(Url) ->
-	request(get, {Url, []}).
+  request(get, {Url, []}).
 
 set_command(Url, Data) ->
-	Response = request(post, {Url, [], "application/x-www-form-urlencoded", Data}),
-	{ok, {{"HTTP/1.1",ReturnCode, State}, _, _}} = Response,
-	io:format("~w / ~p~n", [ReturnCode, State]).
+  Response = request(post, {Url, [], "application/x-www-form-urlencoded", Data}),
+  {ok, {{"HTTP/1.1",ReturnCode, State}, _, _}} = Response,
+  io:format("~w / ~p~n", [ReturnCode, State]).
 
 request(Method, Body) ->
-    httpc:request(Method, Body, [{ssl,[{verify,0}]}], []).
+  httpc:request(Method, Body, [{ssl,[{verify,0}]}], []).
 
-parse_response({ok, { _, _, Body}}) ->
-	 Body.
+parse_response({ok, { _, _, Body}}) -> Body.
 
 parse_message(Message) when Message /= notxt ->
 	{Chat} = proplists:get_value(<<"chat">>, Message),
@@ -87,27 +87,28 @@ parse_message(Message) when Message /= notxt ->
 parse_message(_) -> notxt.
 
 terminate() ->
-	ssl:stop(),
-	inets:stop().
+  ssl:stop(),
+  inets:stop().
 
 run_command(ChatID, "/help") ->
-	send_message(ChatID, "Help text");
+  send_message(ChatID, "Help text");
 
 run_command(_, _ ) -> ok.
 
 check_badword(ChatID, MsgID, Message, Words) ->
-	N1 = os:timestamp(),
-	Msg_lower = string:to_lower(Message),
-	Msg_clean = re:replace(Msg_lower, "[^A-Za-z \n]", "", [global, {return, list}]),
-	List = string:tokens(Msg_clean, " \n"),
+  N1 = os:timestamp(),
+  Msg_lower = string:to_lower(Message),
+  Msg_clean = re:replace(Msg_lower, "[^A-Za-z \n]", "", [global, {return, list}]),
+  List = string:tokens(Msg_clean, " \n"),
 
-	case check_badword_rec(List, Words) of
-  	{bad, Word} -> send_message(ChatID, MsgID, "Modera il linguaggio! '"++ Word++"' non si dice!");
-  	nobad -> nobad
-	end,
-	N2 = os:timestamp(),
-	Time = timer:now_diff(N2,N1)/1000000,
-	io:format("check message in ~w~n", [Time]).
+  case check_badword_rec(List, Words) of
+    {bad, Word} ->
+      send_message(ChatID, MsgID, "Modera il linguaggio! '"++ Word++"' non si dice!");
+    nobad -> nobad
+  end,
+  N2 = os:timestamp(),
+  Time = timer:now_diff(N2,N1)/1000000,
+  io:format("check message in ~w~n", [Time]).
 
 check_badword_rec([H1|T], Words) when T /= [] ->
   case check_badword_rec([H1], Words) of
