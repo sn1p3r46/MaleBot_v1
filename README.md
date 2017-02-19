@@ -4,12 +4,14 @@ MaleBot(@malebot) is a telegram bot, which scolds you if you use bad-words. It s
 ### Instruction
 To work you need to create a file `src/token.hrl` where define telegram token:
 ```
-	-define(TOKEN, "<token>").
+-define(TOKEN, "<token>").
 ```
 To get the token follow the instructions here [how-do-i-create-a-bot] (https://core.telegram.org/bots/#3-how-do-i-create-a-bot)
 
 ### Run:
-	./start_bot.sh
+```
+./start_bot.sh
+```
 
 ### Technology:
 - Erlang
