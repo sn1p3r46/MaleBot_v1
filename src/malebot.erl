@@ -27,29 +27,29 @@ read_words(IoDevice, Words) ->
   end.
 
 command_handler(Url, UpdateId, Words) ->
-	Response = parse_response(get_command(Url ++ integer_to_list(UpdateId + 1))),
-	{JsonObj} = jiffy:decode(Response),
-	Result = proplists:get_value(<<"result">>, JsonObj, []),
-	Message = case Result of
+  Response = parse_response(get_command(Url ++ integer_to_list(UpdateId + 1))),
+  {JsonObj} = jiffy:decode(Response),
+  Result = proplists:get_value(<<"result">>, JsonObj, []),
+  Message = case Result of
     [ {[{<<"update_id">>, NewUpdateId}, {<<"message">>, {_Message}} |_]} |_] ->
-    	_Message;
+      _Message;
     [ {[{<<"update_id">>, NewUpdateId}, {<<"edited_message">>, {_Message}} |_]} |_] ->
-    	_Message;
+      _Message;
     [ {[{<<"update_id">>, NewUpdateId} |_]} |_] ->
-    	notxt;
+      notxt;
     [] ->
       NewUpdateId = UpdateId,
       notxt
-	end,
-	case parse_message(Message) of
-		{command, ChatID, _, Msg_str} ->
+  end,
+  case parse_message(Message) of
+    {command, ChatID, _, Msg_str} ->
       run_command(ChatID, Msg_str);
-		{text, ChatID, MsgID, Msg_str} ->
-			check_badword(ChatID, MsgID, Msg_str, Words);
-		notxt -> ok
-	end,
-	timer:sleep(1000),
-	command_handler(Url, NewUpdateId, Words).
+    {text, ChatID, MsgID, Msg_str} ->
+      check_badword(ChatID, MsgID, Msg_str, Words);
+      notxt -> ok
+  end,
+  timer:sleep(1000),
+  command_handler(Url, NewUpdateId, Words).
 
 send_message(ChatID, Text) ->
   set_command(?SET_COMMAND_URL, "chat_id=" ++ integer_to_list(ChatID) ++ "&text=" ++ Text).
@@ -71,18 +71,18 @@ request(Method, Body) ->
 parse_response({ok, { _, _, Body}}) -> Body.
 
 parse_message(Message) when Message /= notxt ->
-	{Chat} = proplists:get_value(<<"chat">>, Message),
-	ChatID = proplists:get_value(<<"id">>, Chat),
-	Command = proplists:get_value(<<"text">>, Message),
-	MsgID = proplists:get_value(<<"message_id">>, Message),
-	case Command of
+  {Chat} = proplists:get_value(<<"chat">>, Message),
+  ChatID = proplists:get_value(<<"id">>, Chat),
+  Command = proplists:get_value(<<"text">>, Message),
+  MsgID = proplists:get_value(<<"message_id">>, Message),
+  case Command of
     undefined -> notxt;
     _ -> Msg_str = binary_to_list(Command),
       case Msg_str of
-       [H|_] when H==47 -> {command, ChatID, MsgID, Msg_str};
-       _  -> {text, ChatID, MsgID, Msg_str}
+        [H|_] when H==47 -> {command, ChatID, MsgID, Msg_str};
+        _  -> {text, ChatID, MsgID, Msg_str}
       end
-	end;
+  end;
 
 parse_message(_) -> notxt.
 
