@@ -2,6 +2,9 @@
 
 -export([start/0]).
 
+-import(bsearch,[search_word/2,get_word_list/0]).
+
+
 -include("token.hrl").
 -define(BASE_URL, "https://api.telegram.org/bot" ++ ?TOKEN).
 -define(GET_COMMAND_URL, ?BASE_URL ++ "/getUpdates?offset=").
@@ -12,19 +15,10 @@ start() ->
   inets:start(),
   ssl:start(),
 
-  {ok, IoDevice} = file:open("res/lista_badwords.txt", [read]),
-  Words = read_words(IoDevice, []),
-  file:close(IoDevice),
+  Words = get_word_list(),
 
   command_handler(?GET_COMMAND_URL, 0, Words).
 
-read_words(IoDevice, Words) ->
-  case file:read_line(IoDevice) of
-    {ok, Line} ->
-      [V] = string:tokens(Line,"\n"),
-      read_words(IoDevice, lists:append(Words, [V]));
-    eof -> Words
-  end.
 
 command_handler(Url, UpdateId, Words) ->
   Response = parse_response(get_command(Url ++ integer_to_list(UpdateId + 1))),
@@ -70,7 +64,9 @@ request(Method, Body) ->
 
 parse_response({ok, { _, _, Body}}) -> Body.
 
-parse_message(Message) when Message /= notxt ->
+parse_message(notxt) -> notxt;
+
+parse_message(Message) ->
   {Chat} = proplists:get_value(<<"chat">>, Message),
   ChatID = proplists:get_value(<<"id">>, Chat),
   Command = proplists:get_value(<<"text">>, Message),
@@ -79,12 +75,13 @@ parse_message(Message) when Message /= notxt ->
     undefined -> notxt;
     _ -> Msg_str = binary_to_list(Command),
       case Msg_str of
-        [H|_] when H==47 -> {command, ChatID, MsgID, Msg_str};
+        [47|_] -> {command, ChatID, MsgID, Msg_str};
         _  -> {text, ChatID, MsgID, Msg_str}
       end
-  end;
+  end.
 
-parse_message(_) -> notxt.
+% to be removed if no other case apply.
+% parse_message(_) -> notxt.
 
 terminate() ->
   ssl:stop(),
@@ -110,20 +107,23 @@ check_badword(ChatID, MsgID, Message, Words) ->
   Time = timer:now_diff(N2,N1)/1000000,
   io:format("check message in ~w~n", [Time]).
 
-check_badword_rec([H1|T], Words) when T /= [] ->
+
+check_badword_rec([H|[]], Words) ->
+  case search_word(H,Words) of
+    true ->	{bad, H};
+    false -> nobad
+  end;
+
+check_badword_rec([H1|T], Words) ->
   case check_badword_rec([H1], Words) of
     nobad -> [H2|_] = T,
-      case lists:any(fun(Bad) -> H1++H2 == Bad end, Words) of
+      case search_word(H1++H2,Words) of
         true ->	{bad, H1 ++ " " ++ H2};
         false -> check_badword_rec(T, Words)
       end;
     A -> A
   end;
 
-check_badword_rec([H], Words) ->
-  case lists:any(fun(Bad) -> H == Bad end, Words) of
-    true ->	{bad, H};
-    false -> nobad
-  end;
-
 check_badword_rec([], _) -> nobad.
+
+
