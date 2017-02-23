@@ -80,8 +80,6 @@ parse_message(Message) ->
       end
   end.
 
-% to be removed if no other case apply.
-% parse_message(_) -> notxt.
 
 terminate() ->
   ssl:stop(),
@@ -125,5 +123,3 @@ check_badword_rec([H1|T], Words) ->
   end;
 
 check_badword_rec([], _) -> nobad.
-
-
