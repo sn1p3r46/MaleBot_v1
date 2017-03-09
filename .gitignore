@@ -5,3 +5,4 @@ deps/
 *.lock
 src/token.hrl
 *.beam
+*.swp
