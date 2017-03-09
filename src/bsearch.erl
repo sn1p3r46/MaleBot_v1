@@ -38,16 +38,10 @@ read_words(IoDevice, Words) ->
     eof -> Words
   end.
 
-string_array_to_num(Array) ->
-    string_array_to_num(Array,0).
-
-string_array_to_num([],N) -> round(N);
-
-string_array_to_num([H|T],N) ->
-    string_array_to_num(T,N*math:pow(10,round(math:log10(H)+1))+H).
 
 get_word_list() ->
-    lists:sort(lists:map(fun string_array_to_num/1 ,read_cfile())).
+    lists:sort(read_cfile()).
+
 
 search_word(Word,SortedWList) ->
-    search(string_array_to_num(Word),SortedWList).
+    search(Word,SortedWList).
